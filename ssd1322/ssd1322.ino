@@ -37,8 +37,11 @@ void loop()
 { 
     clearDisp();
 //    rectFill();
-    getHz((uint8_t *)"\xb1\xae");
-    drawHz(8, 0);
+    uint8_t *hz="北京大学";
+    for (int i = 0; i < 4; ++i) {
+        getHz((uint8_t *)&hz[i * 2]);
+        drawHz(8 + i * 6, 0);
+    }
     for(;;);
 }
 
