@@ -2,7 +2,7 @@
  */
 #include <SSD1306.h>
 #include <Servo.h>
-#include <PinChangeInt.h>
+#include <PinChangeInterrupt.h>
 #include <MsTimer2.h>
 
 #define OLED_DC 10
@@ -228,10 +228,10 @@ void setup()
 	pinMode(KEY, INPUT);
 	delay(200);
 	attachInterrupt(0, READ_ENCODER_R, CHANGE);
-	attachPinChangeInterrupt(4, READ_ENCODER_L, CHANGE);
+	attachPinChangeInterrupt(20, READ_ENCODER_L, CHANGE);
 	MsTimer2::set(10, control);
 	MsTimer2::start();
-	Serial.begin(9600);
+	Serial.begin(38400);
 }
 
 void loop()
