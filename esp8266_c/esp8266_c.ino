@@ -59,7 +59,7 @@ void loop()
         break;
       case 1:
         if (comdata == "OK") {
-          Serial.print("AT+CWJAP_DEF=\"ESPT\",\"1234567\"\r\n");
+          Serial.print("AT+CWJAP_DEF=\"Arduino\",\"yingcai18\"\r\n");
           state = 2;
           ss.println("Mode Ready");
         }
@@ -73,7 +73,7 @@ void loop()
         break;
       case 3:
         if (comdata == "OK") {
-          Serial.print("AT+CIPSTART=\"TCP\",\"192.168.4.1\",333\r\n");
+          Serial.print("AT+CIPSTART=\"TCP\",\"192.168.0.101\",333\r\n");
           state = 4;
           ss.println("MUX Ready");
         }

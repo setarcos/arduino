@@ -49,15 +49,15 @@ void loop()
     switch (state) {
       case 0:
         if (comdata == "ready"){
-          Serial.print("AT+CWMODE=2\r\n");
+          Serial.print("AT+CWMODE=1\r\n");
           state = 1;
           ss.println("Ready");
         }
         break;
       case 1:
         if (comdata == "OK") {
-          Serial.print("AT+CWSAP_DEF=\"ESPT\",\"1234567\",5,4\r\n");
-          state = 2;
+          Serial.print("AT+CWJAP_DEF=\"Arduino\",\"yingcai18\"\r\n");
+          state = 7;
           ss.println("Mode Ready");
         }
         break;
@@ -95,6 +95,13 @@ void loop()
         if (comdata == "OK") {
           ss.println("Over");
         }
+        break;
+      case 7:
+        if (comdata == "OK") {
+          Serial.print("AT+CIFSR\r\n"); // Show IP
+          state = 2;
+        }
+        break;
     }
     comdata = "";
   }
