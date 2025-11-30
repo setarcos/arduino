@@ -2,27 +2,31 @@
 #include <RTC.h>
 #include <DHT.h>
 #include <ArduinoHttpClient.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
 
 // ================= CONFIGURATION =================
-const char* SSID_NAME     = "NAME";
-const char* SSID_PASS     = "PASSPASS";
+const char* SSID_NAME     = "YOUR_WIFI_NAME";
+const char* SSID_PASS     = "YOUR_WIFI_PASSWORD";
 
 // Worker Config
-const char* SERVER_ADDR   = "EXAMPLE.COM"; 
-const char* API_KEY       = "MY-API-KEY";
+const char* SERVER_ADDR   = "yourdomain.com";
+const char* API_KEY       = "YOUR_API_KEY";
 const int ROOM_ID         = 1;
 
 // Sensor Config
-#define DHTPIN 2     
+#define DHTPIN 2
 #define DHTTYPE DHT11
 // =================================================
 
 DHT dht(DHTPIN, DHTTYPE);
 WiFiSSLClient wifi;
 HttpClient client = HttpClient(wifi, SERVER_ADDR, 443);
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "ntp.aliyun.com");
 
 // Sleep duration: 1 hour (3600 seconds)
-const int SLEEP_SECONDS = 3600; 
+const int SLEEP_SECONDS = 3600;
 
 void setup() {
   Serial.begin(9600);
@@ -32,12 +36,12 @@ void setup() {
   RTC.begin();
 
   Serial.println("Birdcage Monitor Starting...");
-  
+
   // 1. Connect to Wi-Fi immediately to get the time
   connectToWiFi();
 
   // 2. Sync the internal RTC with the Internet (NTP)
-  // syncRTC();
+  syncRTC();
 }
 
 void loop() {
@@ -55,21 +59,21 @@ void loop() {
   // 2. Read Sensor
   float t = dht.readTemperature();
   float h = dht.readHumidity();
-  
+
   if (isnan(t) || isnan(h)) {
     Serial.println("Failed to read from DHT sensor!");
   } else {
     Serial.print("Temperature: ");
     Serial.print(t);
     Serial.println(" *C");
-    
+
     // 3. Send to Cloudflare
     sendDataToWorker(t, h);
   }
 
   // 4. Disconnect Wi-Fi to save power
   WiFi.disconnect();
-  WiFi.end(); 
+  WiFi.end();
   Serial.println("Wi-Fi disconnected.");
 
   // 5. Enter Low Power Sleep
@@ -92,35 +96,40 @@ void connectToWiFi() {
 }
 
 void syncRTC() {
-  Serial.println("Syncing time with NTP Server...");
+  Serial.println("Syncing time with ntp.aliyun.com...");
 
-  // WiFi.getTime() fetches Unix timestamp from pool.ntp.org
-  // It returns 0 if it fails. We try a few times.
-  unsigned long epochTime = 0;
+  // Start the NTP client
+  timeClient.begin();
+
+  // Force update to get time
+  // update() returns true if successful
   int retries = 0;
-
-  while (epochTime == 0 && retries < 10) {
-    epochTime = WiFi.getTime();
-    if (epochTime == 0) {
-      Serial.println("NTP fetch failed, retrying...");
-      delay(1000);
-      retries++;
-    }
+  while(!timeClient.update() && retries < 10) {
+    timeClient.forceUpdate();
+    delay(1000);
+    Serial.print(".");
+    retries++;
   }
 
-  if (epochTime > 0) {
-    // Update the internal RTC with the fetched time
+  unsigned long epochTime = timeClient.getEpochTime();
+
+  // Check if we got a valid time (valid epoch is > 2024-01-01)
+  if (epochTime > 1704067200) {
     RTCTime timeToSet(epochTime);
     RTC.setTime(timeToSet);
-    Serial.print("Time synced successfully! Unix: ");
+    Serial.println("\nTime synced successfully!");
+    Serial.print("Unix: ");
     Serial.println(epochTime);
   } else {
-    Serial.println("Failed to sync time. RTC may be inaccurate.");
+    Serial.println("\nFailed to sync time via NTP.");
   }
+
+  // Stop UDP to save resources
+  timeClient.end();
 }
 
 void sendDataToWorker(float temperature, float humidity) {
-  String payload = "{\"room_id\": " + String(ROOM_ID) + 
+  String payload = "{\"room_id\": " + String(ROOM_ID) +
                    ", \"temperature\": " + String(temperature, 1) +
                    ", \"humidity\": " + String(humidity, 1) + "}";
 
